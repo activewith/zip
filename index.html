@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AW ZIP — 대용량 압축·해제</title>
+<meta name="description" content="설치 없이 브라우저에서 4GB 이상 대용량 파일을 ZIP·TAR·GZ로 압축하고 풉니다. 분할압축, AES 암호, 한글 파일명 지원. 파일은 서버로 전송되지 않습니다.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='8' y='6' width='48' height='52' rx='8' fill='%232457d6'/%3E%3Cpath d='M28 6h8v6h-8zm0 10h8v6h-8zm0 10h8v6h-8z' fill='%23fff'/%3E%3Crect x='24' y='36' width='16' height='14' rx='3' fill='%23fff'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f4f6fa; --card: #fff; --ink: #18202c; --muted: #667085; --line: #e3e7ef;
+    --brand: #2457d6; --brand-ink: #fff; --brand-soft: #e9effd; --danger: #c8322b; --ok: #1a8a4a; --warn: #a15c00;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif; }
+  header { max-width: 980px; margin: 0 auto; padding: 28px 20px 8px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 22px; letter-spacing: -0.3px; }
+  header h1 span { color: var(--brand); }
+  header p { margin: 0; color: var(--muted); font-size: 13.5px; }
+  main { max-width: 980px; margin: 0 auto; padding: 8px 20px 40px; }
+  .banner { background: #fff4e5; border: 1px solid #f2d3a6; color: var(--warn); padding: 12px 14px; border-radius: var(--radius); margin-bottom: 14px; font-size: 14px; }
+  .tabs { display: flex; gap: 6px; margin: 10px 0 0; }
+  .tab { border: 1px solid var(--line); border-bottom: none; background: #eef1f6; color: var(--muted); padding: 10px 18px; border-radius: 10px 10px 0 0; font: inherit; font-weight: 600; cursor: pointer; }
+  .tab[aria-selected="true"] { background: var(--card); color: var(--ink); }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 0 var(--radius) var(--radius) var(--radius); padding: 20px; }
+  .drop { border: 2px dashed #c6cfdf; border-radius: var(--radius); padding: 26px 16px; text-align: center; color: var(--muted); transition: .15s; }
+  .drop.over { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+  .drop strong { color: var(--ink); display: block; font-size: 16px; margin-bottom: 4px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .btn { border: 1px solid var(--line); background: #fff; color: var(--ink); padding: 8px 14px; border-radius: 9px; font: inherit; font-weight: 600; cursor: pointer; }
+  .btn:hover { border-color: #b9c3d6; }
+  .btn.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); padding: 11px 22px; font-size: 16px; }
+  .btn.primary:disabled { background: #a9b9e6; border-color: #a9b9e6; cursor: not-allowed; }
+  .btn.danger { color: var(--danger); }
+  .btn.small { padding: 4px 10px; font-size: 13px; font-weight: 500; }
+  .list { margin-top: 14px; border: 1px solid var(--line); border-radius: 10px; max-height: 280px; overflow: auto; font-size: 13.5px; }
+  .list:empty { display: none; }
+  .list table { width: 100%; border-collapse: collapse; }
+  .list td { padding: 6px 10px; border-bottom: 1px solid #f0f2f6; white-space: nowrap; }
+  .list td.name { white-space: normal; word-break: break-all; }
+  .list td.size { text-align: right; color: var(--muted); width: 1%; }
+  .list td.act { width: 1%; }
+  .list .more { padding: 8px 10px; color: var(--muted); }
+  .summary { margin-top: 8px; color: var(--muted); font-size: 13.5px; }
+  .opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px 18px; margin-top: 18px; }
+  .opt label.t { display: block; font-size: 13px; font-weight: 700; color: #344054; margin-bottom: 5px; }
+  .opt select, .opt input[type=text], .opt input[type=password], .opt input[type=number] { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: #fff; }
+  .opt .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .check { display: flex; gap: 6px; align-items: center; font-size: 14px; margin-top: 4px; }
+  .actions { margin-top: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .progress { margin-top: 18px; border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; background: #fafbfd; display: none; }
+  .progress.show { display: block; }
+  .bar { height: 12px; background: #e6eaf2; border-radius: 99px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 0; background: var(--brand); transition: width .2s; }
+  .pstat { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; font-size: 13.5px; }
+  .pfile { margin-top: 4px; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .msg { margin-top: 12px; padding: 10px 12px; border-radius: 9px; font-size: 14px; display: none; white-space: pre-line; }
+  .msg.show { display: block; }
+  .msg.ok { background: #e8f6ee; color: var(--ok); }
+  .msg.err { background: #fdecea; color: var(--danger); }
+  .msg.info { background: var(--brand-soft); color: #1d3f9c; }
+  .info-box { margin-top: 14px; padding: 12px 14px; background: #f7f9fc; border: 1px solid var(--line); border-radius: 10px; font-size: 14px; display: none; }
+  .info-box.show { display: block; }
+  .tag { display: inline-block; background: var(--brand-soft); color: var(--brand); font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 99px; margin-right: 6px; }
+  footer { max-width: 980px; margin: 0 auto; padding: 0 20px 30px; color: var(--muted); font-size: 12.5px; }
+  footer ul { margin: 6px 0 0; padding-left: 18px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1><span>AW</span> ZIP</h1>
+  <p>대용량(4GB 이상) 압축·해제 · ZIP / TAR / TAR.GZ / GZ · 분할압축 · 파일은 서버로 전송되지 않음</p>
+</header>
+<main>
+  <div class="banner" id="unsupported" hidden>
+    이 브라우저는 지원하지 않습니다. <b>PC용 Chrome 또는 Edge</b>에서 열어 주세요. (디스크에 직접 쓰는 File System Access API가 필요합니다)
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-tab="c">압축하기</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="x">압축 풀기</button>
+  </div>
+
+  <!-- 압축 -->
+  <section class="panel" id="tab-c">
+    <div class="drop" id="cDrop">
+      <strong>파일이나 폴더를 여기로 끌어다 놓으세요</strong>
+      <div class="row" style="justify-content:center;margin-top:10px">
+        <button class="btn" id="cAddFiles">파일 추가</button>
+        <button class="btn" id="cAddFolder">폴더 추가</button>
+        <button class="btn danger" id="cClear" hidden>모두 지우기</button>
+      </div>
+      <input type="file" id="cFileInput" multiple hidden>
+    </div>
+    <div class="list" id="cList"></div>
+    <div class="summary" id="cSummary"></div>
+
+    <div class="opts">
+      <div class="opt">
+        <label class="t" for="cFormat">형식</label>
+        <select id="cFormat">
+          <option value="zip">ZIP (.zip)</option>
+          <option value="tgz">TAR.GZ (.tar.gz)</option>
+          <option value="tar">TAR (.tar, 무압축)</option>
+          <option value="gz">GZ (.gz, 파일 1개만)</option>
+        </select>
+      </div>
+      <div class="opt" id="cLevelWrap">
+        <label class="t" for="cLevel">압축 수준</label>
+        <select id="cLevel">
+          <option value="6" selected>표준 (권장 · 가장 빠름)</option>
+          <option value="0">저장만 (압축 안 함 · 매우 빠름)</option>
+          <option value="9">최대 (느림)</option>
+        </select>
+        <div class="hint" id="cLevelHint">표준은 브라우저 내장 엔진을 써서 가장 빠릅니다.</div>
+      </div>
+      <div class="opt">
+        <label class="t" for="cSplit">분할 압축</label>
+        <select id="cSplit">
+          <option value="0">사용 안 함</option>
+          <option value="104857600">100 MB</option>
+          <option value="734003200">700 MB</option>
+          <option value="1073741824">1 GB</option>
+          <option value="2147483648">2 GB</option>
+          <option value="4294967295">4 GB (FAT32 한계)</option>
+          <option value="custom">직접 입력…</option>
+        </select>
+        <input type="number" id="cSplitCustom" min="1" placeholder="MB 단위" hidden style="margin-top:6px">
+        <div class="hint" id="cSplitHint">분할 시 저장할 폴더를 고릅니다.</div>
+      </div>
+      <div class="opt" id="cPwWrap">
+        <label class="t" for="cPw">암호 (선택)</label>
+        <input type="password" id="cPw" autocomplete="new-password" placeholder="비워두면 암호 없음">
+        <div class="hint">AES-256 암호화. 반디집·7-Zip 등에서 풀 수 있습니다. (윈도우 기본 탐색기는 AES 암호 ZIP을 못 엶)</div>
+      </div>
+      <div class="opt">
+        <label class="t" for="cName">파일 이름</label>
+        <input type="text" id="cName" placeholder="압축파일">
+        <div class="hint" id="cNameHint">.zip</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="cStart" disabled>압축 시작</button>
+      <button class="btn danger" id="cCancel" hidden>취소</button>
+    </div>
+    <div class="progress" id="cProg">
+      <div class="bar"><i></i></div>
+      <div class="pstat"><span class="pct">0%</span><span class="bytes"></span><span class="speed"></span><span class="eta"></span></div>
+      <div class="pfile"></div>
+    </div>
+    <div class="msg" id="cMsg"></div>
+  </section>
+
+  <!-- 해제 -->
+  <section class="panel" id="tab-x" hidden>
+    <div class="drop" id="xDrop">
+      <strong>압축파일을 여기로 끌어다 놓으세요</strong>
+      <div>분할 압축은 조각 전체(.z01 ~ .zip, 또는 .001 ~)를 한 번에 선택하세요.</div>
+      <div class="row" style="justify-content:center;margin-top:10px">
+        <button class="btn" id="xPick">압축파일 선택</button>
+      </div>
+      <input type="file" id="xFileInput" multiple hidden>
+    </div>
+    <div class="info-box" id="xInfo"></div>
+    <div class="list" id="xList"></div>
+
+    <div class="opts" id="xOpts" hidden>
+      <div class="opt" id="xEncWrap">
+        <label class="t" for="xEnc">파일명 인코딩</label>
+        <select id="xEnc">
+          <option value="auto">자동 (UTF-8 / 한글 CP949)</option>
+          <option value="cp949">한글 CP949 (윈도우)</option>
+          <option value="utf-8">UTF-8</option>
+          <option value="cp437">영문 CP437</option>
+        </select>
+        <div class="hint">파일 이름이 깨지면 바꿔 보세요.</div>
+      </div>
+      <div class="opt" id="xPwWrap" hidden>
+        <label class="t" for="xPw">암호</label>
+        <input type="password" id="xPw" autocomplete="off" placeholder="암호가 걸린 압축파일입니다">
+      </div>
+      <div class="opt">
+        <label class="t">옵션</label>
+        <label class="check"><input type="checkbox" id="xMkdir" checked> 압축파일 이름으로 폴더 만들기</label>
+        <label class="check"><input type="checkbox" id="xOverwrite" checked> 같은 이름의 파일 덮어쓰기</label>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="xStart" disabled>압축 풀기</button>
+      <button class="btn danger" id="xCancel" hidden>취소</button>
+    </div>
+    <div class="progress" id="xProg">
+      <div class="bar"><i></i></div>
+      <div class="pstat"><span class="pct">0%</span><span class="bytes"></span><span class="speed"></span><span class="eta"></span></div>
+      <div class="pfile"></div>
+    </div>
+    <div class="msg" id="xMsg"></div>
+  </section>
+</main>
+<footer>
+  <b>참고</b>
+  <ul>
+    <li>모든 처리는 이 PC의 브라우저 안에서 이루어지며, 파일은 어디에도 업로드되지 않습니다.</li>
+    <li>결과물은 고른 폴더에 직접 써집니다. 결과물 크기만큼의 디스크 여유 공간이 필요합니다.</li>
+    <li>지원: ZIP(ZIP64·분할 .z01·AES/ZipCrypto 암호·한글 CP949 파일명), TAR, TAR.GZ/TGZ, GZ, 단순 분할(.001). RAR·7z·ALZ·EGG는 아직 지원하지 않습니다.</li>
+    <li>사용자 홈 폴더·시스템 폴더 등 일부 폴더는 브라우저 보안 정책상 고를 수 없습니다. 그럴 땐 하위 폴더를 만들어 고르세요.</li>
+  </ul>
+  <div style="margin-top:8px">AW ZIP v1.0 · <a href="https://activewith.net" style="color:inherit">activewith.net</a></div>
+</footer>
+
+<script src="vendor/zip.min.js"></script>
+<script src="core.js"></script>
+<script src="zipops.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
