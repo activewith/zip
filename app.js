@@ -113,6 +113,41 @@
     for (const rec of registry) if (!rec.closed) { rec.closed = true; try { await rec.w.abort(); } catch (e) {} }
   }
 
+  /* ---------- 폴더 선택 (차단 폴더 안내 포함) ---------- */
+  let guideSeen = false;
+  try { guideSeen = localStorage.getItem("awzip-folder-guide") === "1"; } catch (e) {}
+  function showGuide(title, retry) {
+    const d = $("folderGuide");
+    $("fgTitle").textContent = title;
+    $("fgRetry").hidden = !retry;
+    return new Promise((resolve) => {
+      const done = (v) => { $("fgPick").onclick = $("fgCancel").onclick = d.oncancel = null; if (d.open) d.close(); resolve(v); };
+      $("fgPick").onclick = () => done(true);
+      $("fgCancel").onclick = () => done(false);
+      d.oncancel = (e) => { e.preventDefault(); done(false); }; // Esc
+      d.showModal();
+    });
+  }
+  async function pickFolder(id, title) {
+    const open = () => window.showDirectoryPicker({ id, mode: "readwrite", startIn: "downloads" });
+    let retry = false;
+    if (guideSeen) {
+      try { return await open(); } catch (e) { if (e.name !== "AbortError") throw e; retry = true; }
+    }
+    for (;;) {
+      if (!(await showGuide(title, retry))) throw new DOMException("The user aborted a request.", "AbortError");
+      try {
+        const h = await open();
+        guideSeen = true;
+        try { localStorage.setItem("awzip-folder-guide", "1"); } catch (e) {}
+        return h;
+      } catch (e) {
+        if (e.name !== "AbortError") throw e;
+        retry = true;
+      }
+    }
+  }
+
   async function exists(dir, name) { try { await dir.getFileHandle(name); return true; } catch (e) { return false; } }
   async function removeIfExists(dir, name) { try { await dir.removeEntry(name); } catch (e) {} }
   async function renameInDir(dir, from, to) {
@@ -289,7 +324,7 @@
       base = format === "gz" ? files[0].path.split("/").pop() : safeFileName($("cName").value.trim() || defaultName());
       const ext = format === "gz" ? ".gz" : EXT[format];
       if (split) {
-        outDir = await window.showDirectoryPicker({ id: "awzip-out", mode: "readwrite" });
+        outDir = await pickFolder("awzip-out", "분할 압축파일을 저장할 폴더 선택");
         // 기존 조각 정리
         const names = [];
         for await (const [n, h] of outDir.entries()) if (h.kind === "file") names.push(n);
@@ -498,7 +533,7 @@
     }
     let root;
     try {
-      root = await window.showDirectoryPicker({ id: "awzip-extract", mode: "readwrite" });
+      root = await pickFolder("awzip-extract", "압축을 풀 폴더 선택");
     } catch (e) { if (!isPickerCancel(e)) msg($("xMsg"), "err", errText(e)); return; }
 
     setBusy(true, "x");

@@ -65,6 +65,13 @@
   .tag { display: inline-block; background: var(--brand-soft); color: var(--brand); font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 99px; margin-right: 6px; }
   footer { max-width: 980px; margin: 0 auto; padding: 0 20px 30px; color: var(--muted); font-size: 12.5px; }
   footer ul { margin: 6px 0 0; padding-left: 18px; }
+  dialog.guide { border: none; border-radius: 14px; padding: 22px 24px; max-width: 520px; box-shadow: 0 20px 60px rgba(0,0,0,.25); color: var(--ink); }
+  dialog.guide::backdrop { background: rgba(15,23,42,.45); }
+  dialog.guide h3 { margin: 0 0 10px; font-size: 18px; }
+  dialog.guide p { margin: 8px 0; font-size: 14.5px; }
+  dialog.guide .warn { background: #fff4e5; border: 1px solid #f2d3a6; color: #7a4500; padding: 10px 12px; border-radius: 9px; font-size: 14px; }
+  dialog.guide .how { background: var(--brand-soft); color: #1d3f9c; padding: 10px 12px; border-radius: 9px; font-size: 14px; }
+  dialog.guide .retry { color: var(--danger); font-weight: 700; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -209,8 +216,20 @@
     <li>지원: ZIP(ZIP64·분할 .z01·AES/ZipCrypto 암호·한글 CP949 파일명), TAR, TAR.GZ/TGZ, GZ, 단순 분할(.001). RAR·7z·ALZ·EGG는 아직 지원하지 않습니다.</li>
     <li>사용자 홈 폴더·시스템 폴더 등 일부 폴더는 브라우저 보안 정책상 고를 수 없습니다. 그럴 땐 하위 폴더를 만들어 고르세요.</li>
   </ul>
-  <div style="margin-top:8px">AW ZIP v1.0 · <a href="https://activewith.net" style="color:inherit">activewith.net</a></div>
+  <div style="margin-top:8px">AW ZIP v1.1 · <a href="https://activewith.net" style="color:inherit">activewith.net</a></div>
 </footer>
+
+<dialog class="guide" id="folderGuide">
+  <h3 id="fgTitle">저장할 폴더 선택</h3>
+  <p class="retry" id="fgRetry" hidden>폴더 선택이 취소되었거나, 고를 수 없는 폴더였습니다.</p>
+  <div class="warn"><b>Chrome 보안 정책상 아래 폴더 "자체"는 고를 수 없습니다.</b><br>
+    다운로드 · 문서 · 바탕화면 · 드라이브 최상위(C:\, D:\) · 사용자 폴더 · Windows / Program Files</div>
+  <div class="how" style="margin-top:10px"><b>이렇게 하세요:</b> 선택 창에서 위 폴더 <b>안에 "새 폴더"를 만들고</b>(예: 다운로드\압축) <b>그 새 폴더를 선택</b>하세요.<br>한 번 고른 폴더는 다음부터 기억됩니다.</div>
+  <div class="actions" style="justify-content:flex-end">
+    <button class="btn" id="fgCancel">취소</button>
+    <button class="btn primary" id="fgPick">폴더 선택</button>
+  </div>
+</dialog>
 
 <script src="vendor/zip.min.js"></script>
 <script src="core.js"></script>
